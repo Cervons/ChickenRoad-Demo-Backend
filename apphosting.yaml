@@ -1,0 +1,10 @@
+kind: "AppHostingYaml"
+schemaVersion: "v1"
+
+environmentVariables:
+  - variable: QUARKUS_REDIS_HOSTS
+    value: "redis://default:bae73tPB28bCm1xCaEZiBnhTH3oJHhKh@redis-17138.c266.us-east-1-3.ec2.cloud.redislabs.com:17138"
+    availability: ["BUILD", "RUNTIME"]
+  - variable: QUARKUS_HTTP_CORS_ORIGINS
+    value: "*"
+    availability: ["RUNTIME"]
