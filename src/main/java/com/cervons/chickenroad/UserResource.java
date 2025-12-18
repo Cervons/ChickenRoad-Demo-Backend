@@ -1,5 +1,6 @@
 package com.cervons.chickenroad;
 
+import com.cervons.chickenroad.model.*;
 import com.cervons.chickenroad.service.GameService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
@@ -18,8 +19,20 @@ public class UserResource {
     @Path("/{id}")
     public Response getUser(@PathParam("id") String id) {
         double balance = gameService.getUserBalance(id);
-        return Response.ok(Map.of(
-                "username", "User" + id,
-                "balance", balance)).build();
+        return Response.ok(new User(id, balance)).build();
+    }
+
+    @POST
+    @Path("/deposit")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response deposit(DepositRequest request) {
+        if (request.amount() <= 0) {
+            return Response.status(400).entity(Map.of("error", "Amount must be positive")).build();
+        }
+
+        gameService.updateUserBalance(request.userId(), request.amount());
+        double newBalance = gameService.getUserBalance(request.userId());
+
+        return Response.ok(new User(request.userId(), newBalance)).build();
     }
 }
