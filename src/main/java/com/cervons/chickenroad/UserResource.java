@@ -18,8 +18,8 @@ public class UserResource {
     @GET
     @Path("/{id}")
     public Response getUser(@PathParam("id") String id) {
-        double balance = gameService.getUserBalance(id);
-        return Response.ok(new User(id, balance)).build();
+        User user = gameService.getUser(id);
+        return Response.ok(user).build();
     }
 
     @POST
@@ -31,8 +31,8 @@ public class UserResource {
         }
 
         gameService.updateUserBalance(request.userId(), request.amount());
-        double newBalance = gameService.getUserBalance(request.userId());
+        User updatedUser = gameService.getUser(request.userId());
 
-        return Response.ok(new User(request.userId(), newBalance)).build();
+        return Response.ok(updatedUser).build();
     }
 }

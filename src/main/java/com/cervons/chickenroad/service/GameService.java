@@ -1,14 +1,17 @@
 package com.cervons.chickenroad.service;
 
 import com.cervons.chickenroad.model.GameSession;
+import com.cervons.chickenroad.model.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.quarkus.redis.datasource.RedisDataSource;
+import io.quarkus.redis.datasource.hash.HashCommands;
 import io.quarkus.redis.datasource.value.ValueCommands;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
@@ -16,6 +19,7 @@ import java.util.UUID;
 public class GameService {
 
     private final ValueCommands<String, String> commands;
+    private final HashCommands<String, String, String> hashCommands;
 
     @Inject
     ObjectMapper mapper;
@@ -24,6 +28,7 @@ public class GameService {
 
     public GameService(RedisDataSource ds) {
         this.commands = ds.value(String.class);
+        this.hashCommands = ds.hash(String.class);
     }
 
     public GameSession createSession(String userId, double bet, String difficulty) {
@@ -67,10 +72,25 @@ public class GameService {
         }
     }
 
+    public User getUser(String userId) {
+        String key = "user:" + userId;
+        Map<String, String> fields = hashCommands.hgetall(key);
+        if (fields == null || fields.isEmpty()) {
+            return new User(userId, "User" + userId, 1000.0, "EUR");
+        }
+
+        String username = fields.getOrDefault("username", fields.getOrDefault("usemame", "User" + userId));
+        double balance = Double.parseDouble(fields.getOrDefault("Balance", "0.0"));
+        String currency = fields.getOrDefault("currency", "EUR");
+
+        return new User(userId, username, balance, currency);
+    }
+
     public double getUserBalance(String userId) {
-        String bal = commands.get("user:" + userId + ":balance");
+        String key = "user:" + userId;
+        String bal = hashCommands.hget(key, "Balance");
         if (bal == null) {
-            commands.set("user:" + userId + ":balance", "1000.0");
+            hashCommands.hset(key, "Balance", "1000.0");
             return 1000.0;
         }
         return Double.parseDouble(bal);
@@ -78,7 +98,8 @@ public class GameService {
 
     public void updateUserBalance(String userId, double delta) {
         double current = getUserBalance(userId);
-        commands.set("user:" + userId + ":balance", String.valueOf(current + delta));
+        String key = "user:" + userId;
+        hashCommands.hset(key, "Balance", String.valueOf(current + delta));
     }
 
     private List<Boolean> generatePath(String difficulty) {
