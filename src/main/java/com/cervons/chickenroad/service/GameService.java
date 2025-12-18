@@ -104,23 +104,35 @@ public class GameService {
 
     private List<Boolean> generatePath(String difficulty) {
         List<Boolean> path = new ArrayList<>();
-        // Simple logic: true = safe
         double safeProbability = getSafeProbability(difficulty);
+        int maxSteps = getMaxSteps(difficulty);
 
-        for (int i = 0; i < 25; i++) {
+        for (int i = 0; i < maxSteps; i++) {
             path.add(random.nextDouble() < safeProbability);
         }
         return path;
+    }
+
+    private int getMaxSteps(String difficulty) {
+        if (difficulty == null)
+            return 25;
+        return switch (difficulty.toUpperCase()) {
+            case "EASY" -> 25;
+            case "MEDIUM" -> 20;
+            case "HARD" -> 15;
+            case "HARDCORE" -> 12;
+            default -> 25;
+        };
     }
 
     private double getSafeProbability(String difficulty) {
         if (difficulty == null)
             return 0.8;
         return switch (difficulty.toUpperCase()) {
-            case "EASY" -> 0.90;
-            case "MEDIUM" -> 0.75;
-            case "HARD" -> 0.50;
-            case "HARDCORE" -> 0.25;
+            case "EASY" -> 24.0 / 25.0; // 1/25 BURN
+            case "MEDIUM" -> 22.0 / 25.0; // 3/25 BURN
+            case "HARD" -> 20.0 / 25.0; // 5/25 BURN
+            case "HARDCORE" -> 15.0 / 25.0; // 10/25 BURN
             default -> 0.80;
         };
     }

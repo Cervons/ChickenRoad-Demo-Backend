@@ -57,6 +57,14 @@ public class GameResource {
         if (isSafe) {
             session.currentStep++;
             session.multiplier = gameService.calculateMultiplier(session.currentStep, session.difficulty);
+
+            // Check if last step reached
+            if (session.currentStep >= session.path.size()) {
+                session.status = "WON";
+                event = "CASHOUT";
+                double payout = session.bet * session.multiplier;
+                gameService.updateUserBalance(session.userId, payout);
+            }
         } else {
             session.status = "LOST";
             session.multiplier = 0;
