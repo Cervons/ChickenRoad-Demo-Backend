@@ -22,10 +22,14 @@ public class GameResource {
         try {
             GameSession session = gameService.createSession(request.userId(), request.bet(), request.difficulty());
             double balance = gameService.getUserBalance(request.userId());
-            return Response.ok(Map.of(
-                    "sessionId", session.sessionId,
-                    "status", session.status,
-                    "balance", balance)).build();
+            return Response.ok(new GameResponse(
+                    session.sessionId,
+                    session.status,
+                    session.multiplier,
+                    session.currentStep,
+                    0.0,
+                    balance,
+                    "START")).build();
         } catch (Exception e) {
             return Response.status(400).entity(Map.of("error", e.getMessage())).build();
         }
@@ -48,26 +52,28 @@ public class GameResource {
 
         boolean isSafe = session.path.get(nextStepIndex);
 
-        String event;
+        String event = isSafe ? "SAFE" : "BURN";
 
         if (isSafe) {
             session.currentStep++;
             session.multiplier = gameService.calculateMultiplier(session.currentStep, session.difficulty);
-            event = "SAFE";
-            gameService.saveSession(session);
         } else {
             session.status = "LOST";
             session.multiplier = 0;
-            event = "BURN";
-            gameService.saveSession(session);
         }
 
-        return Response.ok(Map.of(
-                "status", session.status,
-                "multiplier", session.multiplier,
-                "payout", session.bet * session.multiplier,
-                "currentStep", session.currentStep,
-                "event", event)).build();
+        gameService.saveSession(session);
+
+        double currentBalance = gameService.getUserBalance(session.userId);
+
+        return Response.ok(new GameResponse(
+                session.sessionId,
+                session.status,
+                session.multiplier,
+                session.currentStep,
+                session.bet * session.multiplier,
+                currentBalance,
+                event)).build();
     }
 
     @POST
@@ -80,15 +86,20 @@ public class GameResource {
             return Response.status(400).entity(Map.of("error", "Game not active, status is " + session.status)).build();
         }
 
-        session.status = "CASHOUT";
-        double amountWon = session.bet * session.multiplier;
-        gameService.updateUserBalance(session.userId, amountWon);
+        session.status = "WON";
+        double payout = session.bet * session.multiplier;
+        gameService.updateUserBalance(session.userId, payout);
         gameService.saveSession(session);
 
         double newBalance = gameService.getUserBalance(session.userId);
 
-        return Response.ok(Map.of(
-                "balance", newBalance,
-                "amountWon", amountWon)).build();
+        return Response.ok(new GameResponse(
+                session.sessionId,
+                session.status,
+                session.multiplier,
+                session.currentStep,
+                payout,
+                newBalance,
+                "CASHOUT")).build();
     }
 }
